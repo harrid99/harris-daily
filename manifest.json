@@ -2,7 +2,7 @@
   "name": "Harris — Daily",
   "short_name": "Harris",
   "description": "Daily check-in, priorities, and self-care",
-  "start_url": "/",
+  "start_url": "/harris-daily/",
   "display": "standalone",
   "background_color": "#0f0e0c",
   "theme_color": "#0f0e0c",

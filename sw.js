@@ -1,5 +1,5 @@
 const CACHE = 'harris-v1';
-const ASSETS = ['/', '/index.html'];
+const ASSETS = ['/harris-daily/', '/harris-daily/index.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
