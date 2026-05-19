@@ -1,5 +1,5 @@
 const CACHE = 'harris-v1';
-const ASSETS = ['/harris-daily/', '/harris-daily/index.html'];
+const ASSETS = ['./', './index.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
@@ -16,20 +16,15 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// Store scheduled notification IDs
 let scheduledNotifs = [];
 
 self.addEventListener('message', e => {
-  if (e.data?.type === 'schedule') {
-    scheduleAll(e.data.notifs, e.data.priorities);
-  }
+  if (e.data?.type === 'schedule') scheduleAll(e.data.notifs, e.data.priorities);
 });
 
 function scheduleAll(notifs, priorities) {
-  // Clear existing
   scheduledNotifs.forEach(id => clearTimeout(id));
   scheduledNotifs = [];
-
   const now = new Date();
 
   function scheduleAt(hour, min, title, body, enabled) {
@@ -37,24 +32,17 @@ function scheduleAll(notifs, priorities) {
     const target = new Date();
     target.setHours(hour, min, 0, 0);
     if (target <= now) target.setDate(target.getDate() + 1);
-    const delay = target - now;
     const id = setTimeout(() => {
       self.registration.showNotification(title, {
-        body,
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        vibrate: [200, 100, 200],
-        tag: `harris-${hour}-${min}`,
+        body, vibrate: [200, 100, 200], tag: `harris-${hour}-${min}`
       });
-    }, delay);
+    }, target - now);
     scheduledNotifs.push(id);
   }
 
   const isWeekday = [1,2,3,4,5].includes(now.getDay());
-
   scheduleAt(6, 30, 'Good morning, Harris', 'Check in — who do you want to be today?', notifs.morning);
   scheduleAt(20, 0, 'Evening check-in', 'What went well today?', notifs.evening);
-
   if (isWeekday) {
     scheduleAt(10, 30, 'Take a break', `You said: ${priorities}`, notifs.break1);
     scheduleAt(13, 0, 'Midday break', `You said: ${priorities}`, notifs.break2);
