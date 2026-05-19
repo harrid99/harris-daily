@@ -203,7 +203,7 @@ body {
       <div class="greet" id="home-greet"></div>
       <div class="badge" id="streak-badge"></div>
     </div>
-    <div class="ibtn" onclick="go('s-settings',4)">⚙</div>
+    <div style="display:flex;align-items:center;gap:8px"><span id="sync-status" style="font-size:9px;color:var(--accent);opacity:0;transition:opacity .5s;letter-spacing:.1em"></span><div class="ibtn" onclick="go('s-settings',4)">⚙</div></div>
   </div>
 
   <div class="quote-wrap">
@@ -857,11 +857,75 @@ function scheduleNotifications() {
   });
 }
 
+// ── SUPABASE SYNC ────────────────────────────────────────────────────
+const SB_URL = 'https://bpzqsbnrjeckcwomjvpo.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwenFzYm5yamVja2N3b21qdnBvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxNTMzMjIsImV4cCI6MjA5NDcyOTMyMn0.uD00OGCBJdnP8ZYm9WJnnz2yM1PSq2fgOGuUeh4inwM';
+let syncTimeout = null;
+
+async function syncToSupabase() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/harris_data?id=eq.main`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ state: state, updated_at: new Date().toISOString() })
+    });
+    showSyncStatus('✓');
+  } catch(e) { showSyncStatus('offline'); }
+}
+
+async function loadFromSupabase() {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/harris_data?id=eq.main&select=state,updated_at`, {
+      headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+    });
+    const data = await res.json();
+    if (!data?.[0]?.state || !Object.keys(data[0].state).length) return;
+    const remote = data[0].state;
+    const remoteTime = new Date(data[0].updated_at || 0);
+    const localStr = localStorage.getItem('harris-last-sync');
+    const localTime = localStr ? new Date(localStr) : new Date(0);
+    if (remoteTime > localTime) {
+      const defaults = {
+        checklist: ['Yoga|🧘','Teeth + shower|🚿','Little run|🏃','Journal something|✍️'],
+        checkDone:{}, bodyState:null, anchor:'', priorities:[],
+        weeklyGoals:[], eveningEntry:'', goalReview:{}, log:[],
+        notifs:{morning:true,evening:true,break1:true,break2:true},
+        settings:{'workday-override':false,'kidweek-override':false},
+        streak:0, lastCheckin:null,
+      };
+      state = Object.assign(defaults, remote);
+      localStorage.setItem('harris-state', JSON.stringify(state));
+      localStorage.setItem('harris-last-sync', data[0].updated_at);
+      renderHome();
+      showSyncStatus('↓ synced');
+    }
+  } catch(e) {}
+}
+
+function saveState() {
+  localStorage.setItem('harris-state', JSON.stringify(state));
+  clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(syncToSupabase, 1500);
+}
+
+function showSyncStatus(msg) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 2500);
+}
+
 // ── INIT ─────────────────────────────────────────────────────────────
 function init() {
   checkDailyReset();
   renderHome();
-  // Register service worker
+  loadFromSupabase();
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/harris-daily/sw.js').then(() => {
       scheduleNotifications();
