@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0e0c">
+<title>Harris — Daily</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0e0c; --surface: #1a1916; --border: #2e2c28;
+  --text: #e8e4dc; --muted: #6b6760; --accent: #c8a96e;
+  --accent-dim: rgba(200,169,110,0.12); --accent-border: rgba(200,169,110,0.22);
+  --green: #7ab892; --green-dim: rgba(122,184,146,0.12); --green-border: rgba(122,184,146,0.3);
+  --red: #c87070; --red-dim: rgba(200,112,112,0.12);
+  --safe-top: env(safe-area-inset-top, 44px);
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html { height:100%; }
+body {
+  background:var(--bg); color:var(--text);
+  font-family:'DM Mono',monospace; font-size:13px;
+  min-height:100%; overflow-x:hidden;
+  padding-top:var(--safe-top);
+  padding-bottom:calc(72px + var(--safe-bottom));
+}
+
+/* ── SCREENS ── */
+.screen { display:none; padding:0 0 24px; }
+.screen.active { display:block; animation:fadeUp .2s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── HEADER ── */
+.hdr { padding:20px 20px 12px; display:flex; justify-content:space-between; align-items:flex-start; }
+.datelbl { font-size:9px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+.greet { font-family:'Playfair Display',serif; font-size:22px; line-height:1.2; }
+.greet em { font-style:italic; color:var(--accent); }
+.badge { display:inline-flex; align-items:center; gap:4px; background:var(--accent-dim); border:1px solid var(--accent-border); border-radius:20px; padding:2px 9px; font-size:9px; color:var(--accent); letter-spacing:.1em; margin-top:5px; }
+.ibtn { background:var(--surface); border:1px solid var(--border); color:var(--muted); width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:13px; flex-shrink:0; }
+
+/* ── QUOTE ── */
+.quote-wrap { margin:0 16px 10px; }
+.quote-block { padding:13px 15px; background:var(--accent-dim); border:1px solid var(--accent-border); border-radius:13px; position:relative; }
+.qmark { font-family:'Playfair Display',serif; font-size:34px; line-height:.5; color:var(--accent); opacity:.3; position:absolute; top:9px; left:11px; }
+.qtxt { font-family:'Playfair Display',serif; font-style:italic; font-size:13px; line-height:1.65; padding-left:7px; padding-top:3px; }
+.qauth { font-size:8px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-top:6px; padding-left:7px; }
+
+/* ── WEEKLY GOALS (compact, below quote) ── */
+.weekly-strip { margin:8px 16px 16px; }
+.weekly-strip-inner { background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:10px 13px; }
+.weekly-lbl { font-size:8px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:7px; display:flex; justify-content:space-between; align-items:center; }
+.weekly-edit-btn { color:var(--accent); cursor:pointer; font-size:8px; letter-spacing:.1em; }
+.weekly-goal-item { font-size:11px; color:var(--muted); line-height:1.5; padding:2px 0; display:flex; gap:7px; }
+.weekly-goal-item::before { content:'—'; color:var(--border); flex-shrink:0; }
+.weekly-empty { font-size:11px; color:var(--border); font-style:italic; font-family:'Playfair Display',serif; }
+
+/* ── SECTION LABEL ── */
+.slbl { font-size:8px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); padding:0 16px; margin-bottom:8px; }
+
+/* ── STATE SELECTOR ── */
+.states { padding:0 16px; margin-bottom:18px; }
+.srow { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.sbtn { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:9px 3px; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; transition:all .15s; }
+.sbtn.sel { background:var(--accent-dim); border-color:var(--accent); }
+.sico { font-size:18px; }
+.slb { font-size:7px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+.sbtn.sel .slb { color:var(--accent); }
+
+/* ── CHECKLIST ── */
+.cklist { padding:0 16px; margin-bottom:18px; display:flex; flex-direction:column; gap:6px; }
+.ci { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 13px; display:flex; align-items:center; gap:11px; cursor:pointer; transition:all .15s; }
+.ci.done { background:var(--green-dim); border-color:var(--green-border); }
+.cb { width:17px; height:17px; border-radius:4px; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:9px; color:#0f0e0c; transition:all .15s; }
+.ci.done .cb { background:var(--green); border-color:var(--green); }
+.clbl { font-size:12px; flex:1; }
+.ci.done .clbl { color:var(--muted); text-decoration:line-through; text-decoration-color:var(--border); }
+.cico { font-size:13px; }
+
+/* ── DAILY PRIORITIES ── */
+.priorities { padding:0 16px; margin-bottom:18px; }
+.priority-list { display:flex; flex-direction:column; gap:6px; margin-bottom:8px; }
+.priority-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 13px; display:flex; align-items:center; gap:10px; }
+.priority-num { font-size:9px; color:var(--accent); letter-spacing:.1em; flex-shrink:0; width:14px; }
+.priority-txt { font-size:12px; flex:1; color:var(--text); }
+.priority-item.empty .priority-txt { color:var(--border); font-family:'Playfair Display',serif; font-style:italic; }
+.add-priority-btn { background:transparent; border:1px dashed var(--border); border-radius:10px; padding:10px 13px; width:100%; color:var(--muted); font-family:'DM Mono',monospace; font-size:11px; letter-spacing:.1em; cursor:pointer; text-align:left; }
+
+/* ── ANCHOR ── */
+.anch { margin:0 16px 18px; background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.aprompt { font-size:8px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); padding:10px 13px 4px; }
+.ainput { background:transparent; border:none; outline:none; color:var(--text); font-family:'Playfair Display',serif; font-style:italic; font-size:13px; line-height:1.6; padding:0 13px 12px; width:100%; resize:none; min-height:46px; }
+.ainput::placeholder { color:var(--border); }
+
+/* ── BREAK CARDS ── */
+.bkcards { padding:0 16px; display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-bottom:18px; }
+.bkcard { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px; }
+.bkcard.inactive { opacity:.4; }
+.bktime { font-size:18px; font-weight:500; color:var(--accent); letter-spacing:-.02em; margin-bottom:1px; }
+.bklbl { font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.bkst { margin-top:5px; font-size:8px; color:var(--green); display:flex; align-items:center; gap:3px; }
+.bkdot { width:5px; height:5px; border-radius:50%; background:var(--green); }
+.bkst.off { color:var(--muted); }
+.bkst.off .bkdot { background:var(--border); }
+
+/* ── CONTEXT BADGES ── */
+.ctx-row { padding:0 16px; margin-bottom:18px; display:flex; gap:7px; }
+.ctx-badge { padding:5px 11px; border-radius:20px; font-size:9px; letter-spacing:.1em; text-transform:uppercase; border:1px solid var(--border); color:var(--muted); background:var(--surface); }
+.ctx-badge.on { background:var(--accent-dim); border-color:var(--accent-border); color:var(--accent); }
+
+/* ── EVENING ── */
+.ev-block { margin:0 16px 18px; }
+.ev-prompt { font-family:'Playfair Display',serif; font-size:17px; line-height:1.4; margin-bottom:12px; }
+.ev-input { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:13px; width:100%; min-height:90px; color:var(--text); font-family:'Playfair Display',serif; font-style:italic; font-size:13px; line-height:1.65; outline:none; resize:none; }
+.ev-input::placeholder { color:var(--border); }
+.ev-input:focus { border-color:var(--accent-border); }
+
+/* ── GOAL REVIEW ── */
+.goal-review { padding:0 16px; margin-bottom:18px; display:flex; flex-direction:column; gap:7px; }
+.gr-item { background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:11px 13px; }
+.gr-txt { font-size:12px; margin-bottom:8px; }
+.gr-btns { display:flex; gap:6px; }
+.gr-btn { flex:1; padding:7px 4px; border-radius:8px; border:1px solid var(--border); background:transparent; font-family:'DM Mono',monospace; font-size:8px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); cursor:pointer; transition:all .15s; }
+.gr-btn.sel-done { background:var(--green-dim); border-color:var(--green-border); color:var(--green); }
+.gr-btn.sel-partial { background:var(--accent-dim); border-color:var(--accent-border); color:var(--accent); }
+.gr-btn.sel-pushed { background:var(--red-dim); border-color:rgba(200,112,112,.3); color:var(--red); }
+
+/* ── SAVE BTN ── */
+.save-btn { background:var(--accent); color:#0f0e0c; border:none; border-radius:10px; padding:13px; width:calc(100% - 32px); margin:0 16px; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.16em; text-transform:uppercase; font-weight:500; cursor:pointer; display:block; }
+
+/* ── LOG ── */
+.log-entries { padding:0 16px; display:flex; flex-direction:column; gap:7px; }
+.le { background:var(--surface); border:1px solid var(--border); border-radius:11px; padding:11px 13px; }
+.le-date { font-size:7px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+.le-txt { font-family:'Playfair Display',serif; font-style:italic; font-size:12px; line-height:1.6; }
+.le-meta { margin-top:7px; display:flex; gap:4px; flex-wrap:wrap; }
+.le-tag { font-size:7px; letter-spacing:.1em; text-transform:uppercase; padding:2px 6px; border-radius:20px; background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent-border); }
+.le-tag.green { background:var(--green-dim); color:var(--green); border-color:var(--green-border); }
+.le-tag.red { background:var(--red-dim); color:var(--red); border-color:rgba(200,112,112,.3); }
+
+/* ── SETTINGS ── */
+.st-section { padding:0 16px; margin-bottom:18px; }
+.st-item { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 13px; display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; cursor:pointer; }
+.st-lbl { font-size:12px; }
+.st-val { font-size:10px; color:var(--muted); display:flex; align-items:center; gap:8px; }
+.tog { width:34px; height:20px; background:var(--accent); border-radius:10px; position:relative; flex-shrink:0; cursor:pointer; transition:background .2s; }
+.tog::after { content:''; position:absolute; width:14px; height:14px; background:#0f0e0c; border-radius:50%; top:3px; right:3px; transition:all .2s; }
+.tog.off { background:var(--border); }
+.tog.off::after { right:auto; left:3px; }
+.st-item.dashed { border-style:dashed; opacity:.5; }
+
+/* ── WEEKLY EDIT MODAL ── */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; align-items:flex-end; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:20px 20px 0 0; padding:20px 20px calc(20px + var(--safe-bottom)); width:100%; max-height:80vh; overflow-y:auto; }
+.modal-title { font-family:'Playfair Display',serif; font-size:18px; margin-bottom:4px; }
+.modal-sub { font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-bottom:16px; }
+.modal-input { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:11px 13px; width:100%; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; outline:none; margin-bottom:8px; }
+.modal-input:focus { border-color:var(--accent-border); }
+.modal-input::placeholder { color:var(--border); }
+.modal-btns { display:flex; gap:8px; margin-top:8px; }
+.modal-cancel { flex:1; padding:12px; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--muted); font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; }
+.modal-save { flex:2; padding:12px; border-radius:10px; border:none; background:var(--accent); color:#0f0e0c; font-family:'DM Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; font-weight:500; }
+
+/* ── PRIORITY MODAL ── */
+.priority-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; align-items:flex-end; }
+.priority-modal.open { display:flex; }
+
+/* ── NAV ── */
+.bnav {
+  position:fixed; bottom:0; left:0; right:0;
+  background:rgba(15,14,12,.96); backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  display:flex; padding:10px 0;
+  padding-bottom:calc(10px + var(--safe-bottom));
+  z-index:100;
+}
+.ni { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; padding:2px 0; }
+.nico { font-size:18px; opacity:.3; transition:opacity .15s; }
+.nlbl { font-size:7px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); transition:color .15s; }
+.ni.active .nico { opacity:1; }
+.ni.active .nlbl { color:var(--accent); }
+
+/* ── WEEKLY SCREEN ── */
+.weekly-goals-edit { padding:0 16px; margin-bottom:18px; display:flex; flex-direction:column; gap:6px; }
+.wg-input-row { display:flex; gap:7px; align-items:center; }
+.wg-num { font-size:9px; color:var(--accent); width:14px; flex-shrink:0; }
+.wg-input { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; flex:1; color:var(--text); font-family:'DM Mono',monospace; font-size:12px; outline:none; }
+.wg-input:focus { border-color:var(--accent-border); }
+.wg-input::placeholder { color:var(--border); font-family:'Playfair Display',serif; font-style:italic; }
+</style>
+</head>
+<body>
+
+<!-- TODAY SCREEN -->
+<div class="screen active" id="s-home">
+  <div class="hdr">
+    <div>
+      <div class="datelbl" id="home-date"></div>
+      <div class="greet" id="home-greet"></div>
+      <div class="badge" id="streak-badge"></div>
+    </div>
+    <div class="ibtn" onclick="go('s-settings',4)">⚙</div>
+  </div>
+
+  <div class="quote-wrap">
+    <div class="quote-block">
+      <div class="qmark">"</div>
+      <div class="qtxt" id="quote-txt"></div>
+      <div class="qauth" id="quote-auth"></div>
+    </div>
+  </div>
+
+  <div class="weekly-strip">
+    <div class="weekly-strip-inner">
+      <div class="weekly-lbl">
+        This week
+        <span class="weekly-edit-btn" onclick="go('s-weekly',2)">Edit →</span>
+      </div>
+      <div id="weekly-strip-goals"></div>
+    </div>
+  </div>
+
+  <div class="ctx-row" id="ctx-row"></div>
+
+  <div class="slbl">How are you arriving?</div>
+  <div class="states">
+    <div class="srow">
+      <div class="sbtn" onclick="selState(this,'grounded')"><div class="sico">🟢</div><div class="slb">Grounded</div></div>
+      <div class="sbtn" onclick="selState(this,'edgy')"><div class="sico">🟡</div><div class="slb">Edgy</div></div>
+      <div class="sbtn" onclick="selState(this,'fried')"><div class="sico">🔴</div><div class="slb">Fried</div></div>
+      <div class="sbtn" onclick="selState(this,'numb')"><div class="sico">⚪</div><div class="slb">Numb</div></div>
+    </div>
+  </div>
+
+  <div class="slbl">Self-care</div>
+  <div class="cklist" id="checklist"></div>
+
+  <div class="slbl">Today's priorities</div>
+  <div class="priorities">
+    <div class="priority-list" id="priority-list"></div>
+    <button class="add-priority-btn" onclick="openPriorityModal()" id="add-priority-btn">+ Add priority</button>
+  </div>
+
+  <div class="slbl">Anchor</div>
+  <div class="anch">
+    <div class="aprompt">Who do I want to be today?</div>
+    <textarea class="ainput" id="anchor-input" placeholder="Write anything…" rows="2"></textarea>
+  </div>
+
+  <div class="slbl" id="breaks-label">Breaks</div>
+  <div class="bkcards" id="break-cards"></div>
+</div>
+
+<!-- EVENING SCREEN -->
+<div class="screen" id="s-evening">
+  <div class="hdr">
+    <div>
+      <div class="datelbl" id="evening-date"></div>
+      <div class="greet"><em>What landed?</em></div>
+    </div>
+  </div>
+
+  <div class="slbl">Review today's priorities</div>
+  <div class="goal-review" id="goal-review"></div>
+
+  <div class="ev-block">
+    <div class="ev-prompt">What went well today?</div>
+    <textarea class="ev-input" id="evening-input" placeholder="One thing. Or three. No problem-solving."></textarea>
+  </div>
+  <button class="save-btn" onclick="saveEvening()">Save day</button>
+</div>
+
+<!-- WEEKLY SCREEN -->
+<div class="screen" id="s-weekly">
+  <div class="hdr">
+    <div>
+      <div class="datelbl">This week</div>
+      <div class="greet">What <em>matters</em> this week?</div>
+    </div>
+  </div>
+  <div class="weekly-goals-edit" id="weekly-goals-edit"></div>
+  <button class="save-btn" onclick="saveWeeklyGoals()">Save weekly goals</button>
+</div>
+
+<!-- LOG SCREEN -->
+<div class="screen" id="s-log">
+  <div class="hdr">
+    <div>
+      <div class="datelbl">History</div>
+      <div class="greet">Your <em>record.</em></div>
+    </div>
+  </div>
+  <div class="log-entries" id="log-entries"></div>
+</div>
+
+<!-- SETTINGS SCREEN -->
+<div class="screen" id="s-settings">
+  <div class="hdr">
+    <div>
+      <div class="datelbl">Configure</div>
+      <div class="greet"><em>Your setup.</em></div>
+    </div>
+    <div class="ibtn" onclick="go('s-home',0)">✕</div>
+  </div>
+
+  <div class="slbl">Notifications</div>
+  <div class="st-section">
+    <div class="st-item" onclick="toggleNotif('morning')">
+      <div class="st-lbl">Morning check-in</div>
+      <div class="st-val">6:30 am <div class="tog" id="tog-morning"></div></div>
+    </div>
+    <div class="st-item" onclick="toggleNotif('evening')">
+      <div class="st-lbl">Evening journal</div>
+      <div class="st-val">8:00 pm <div class="tog" id="tog-evening"></div></div>
+    </div>
+    <div class="st-item" onclick="toggleNotif('break1')">
+      <div class="st-lbl">Break — morning</div>
+      <div class="st-val">10:30 am <div class="tog" id="tog-break1"></div></div>
+    </div>
+    <div class="st-item" onclick="toggleNotif('break2')">
+      <div class="st-lbl">Break — midday</div>
+      <div class="st-val">1:00 pm <div class="tog" id="tog-break2"></div></div>
+    </div>
+  </div>
+
+  <div class="slbl">Self-care items</div>
+  <div class="st-section" id="checklist-settings"></div>
+
+  <div class="slbl">Context overrides</div>
+  <div class="st-section">
+    <div class="st-item" onclick="toggleSetting('workday-override')">
+      <div class="st-lbl">Force workday (override)</div>
+      <div class="tog" id="tog-workday-override"></div>
+    </div>
+    <div class="st-item" onclick="toggleSetting('kidweek-override')">
+      <div class="st-lbl">Kid week (override)</div>
+      <div class="tog" id="tog-kidweek-override"></div>
+    </div>
+  </div>
+
+  <div class="slbl">Notifications</div>
+  <div class="st-section">
+    <div class="st-item" onclick="requestNotifPermission()">
+      <div class="st-lbl">Enable push notifications</div>
+      <div class="st-val" id="notif-status">Tap to enable →</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIORITY MODAL -->
+<div class="priority-modal" id="priority-modal">
+  <div class="modal">
+    <div class="modal-title">Today's priority</div>
+    <div class="modal-sub">Pull from weekly goals or add something new</div>
+    <div id="weekly-suggestions" style="margin-bottom:10px;display:flex;flex-direction:column;gap:5px;"></div>
+    <input class="modal-input" id="priority-input" placeholder="Or type a new priority…" />
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closePriorityModal()">Cancel</button>
+      <button class="modal-save" onclick="addPriority()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="bnav">
+  <div class="ni active" onclick="go('s-home',0)"><div class="nico">☀️</div><div class="nlbl">Today</div></div>
+  <div class="ni" onclick="go('s-evening',1)"><div class="nico">🌙</div><div class="nlbl">Evening</div></div>
+  <div class="ni" onclick="go('s-weekly',2)"><div class="nico">📅</div><div class="nlbl">Week</div></div>
+  <div class="ni" onclick="go('s-log',3)"><div class="nico">📋</div><div class="nlbl">Log</div></div>
+  <div class="ni" onclick="go('s-settings',4)"><div class="nico">⚙️</div><div class="nlbl">Settings</div></div>
+</nav>
+
+<script>
+// ── QUOTES ──────────────────────────────────────────────────────────
+const QUOTES = [
+  { text: "You do not rise to the level of your goals. You fall to the level of your systems.", auth: "James Clear" },
+  { text: "Between stimulus and response there is a space. In that space is our power to choose our response.", auth: "Viktor Frankl" },
+  { text: "The impediment to action advances action. What stands in the way becomes the way.", auth: "Marcus Aurelius" },
+  { text: "Do not indulge in dreams of what you have not, but count the blessings you have.", auth: "Marcus Aurelius" },
+  { text: "Act well at the moment, and you have performed a good action to all eternity.", auth: "Johann Kaspar Lavater" },
+  { text: "The present moment is the only moment available to us, and it is the door to all moments.", auth: "Thich Nhat Hanh" },
+  { text: "Feelings are not facts. Notice them and act anyway.", auth: "—" },
+  { text: "You are not your thoughts. You are the one who notices them.", auth: "—" },
+  { text: "Waste no more time arguing about what a good man should be. Be one.", auth: "Marcus Aurelius" },
+  { text: "The things that matter most must never be at the mercy of things that matter least.", auth: "Goethe" },
+  { text: "It is not death that a man should fear, but he should fear never beginning to live.", auth: "Marcus Aurelius" },
+  { text: "What we do now echoes in eternity.", auth: "Marcus Aurelius" },
+  { text: "The quality of your attention determines the quality of your presence.", auth: "—" },
+  { text: "Anxiety is the dizziness of freedom.", auth: "Søren Kierkegaard" },
+  { text: "The cave you fear to enter holds the treasure you seek.", auth: "Joseph Campbell" },
+  { text: "Discomfort is the price of growth. Pay it willingly.", auth: "—" },
+  { text: "Your children need your presence more than your presents.", auth: "Jesse Jackson" },
+  { text: "The most precious gift we can offer anyone is our attention.", auth: "Thich Nhat Hanh" },
+  { text: "He who has a why to live can bear almost any how.", auth: "Nietzsche" },
+  { text: "Small acts of integrity, repeated daily, become the man.", auth: "—" },
+  { text: "Do the difficult things while they are easy.", auth: "Lao Tzu" },
+  { text: "Knowing is not enough; we must apply. Willing is not enough; we must do.", auth: "Goethe" },
+  { text: "The body keeps the score. Listen to it before it shouts.", auth: "—" },
+  { text: "You can't think your way into right action. You have to act your way into right thinking.", auth: "—" },
+  { text: "Calm is a superpower. Develop it.", auth: "—" },
+  { text: "The hardest prison to escape is the one you don't know you're in.", auth: "—" },
+  { text: "What you do every day matters more than what you do every once in a while.", auth: "Gretchen Rubin" },
+  { text: "Respond to every call that excites your spirit.", auth: "Rumi" },
+  { text: "Out beyond ideas of wrongdoing and rightdoing, there is a field. I'll meet you there.", auth: "Rumi" },
+  { text: "First say to yourself what you would be; then do what you have to do.", auth: "Epictetus" },
+];
+
+// ── STATE ───────────────────────────────────────────────────────────
+const KID_WEEK_START = new Date('2026-05-18'); // Monday May 18 = kid week
+
+function getState() {
+  const defaults = {
+    checklist: ['Yoga|🧘', 'Teeth + shower|🚿', 'Little run|🏃', 'Journal something|✍️'],
+    checkDone: {},
+    bodyState: null,
+    anchor: '',
+    priorities: [],
+    weeklyGoals: [],
+    eveningEntry: '',
+    goalReview: {},
+    log: [],
+    notifs: { morning: true, evening: true, break1: true, break2: true },
+    settings: { 'workday-override': false, 'kidweek-override': false },
+    streak: 0,
+    lastCheckin: null,
+    quoteIndex: 0,
+  };
+  try {
+    const saved = localStorage.getItem('harris-state');
+    return saved ? Object.assign(defaults, JSON.parse(saved)) : defaults;
+  } catch { return defaults; }
+}
+
+function saveState() {
+  localStorage.setItem('harris-state', JSON.stringify(state));
+}
+
+let state = getState();
+
+// ── DATE HELPERS ─────────────────────────────────────────────────────
+function today() {
+  const d = new Date();
+  return d.toISOString().split('T')[0];
+}
+
+function isWorkday() {
+  if (state.settings['workday-override']) return true;
+  const day = new Date().getDay();
+  return day >= 1 && day <= 5;
+}
+
+function isKidWeek() {
+  if (state.settings['kidweek-override']) return true;
+  const now = new Date();
+  const diffMs = now - KID_WEEK_START;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const weekNum = Math.floor(diffDays / 7);
+  return weekNum % 2 === 0; // even weeks = kid week starting May 18
+}
+
+function isAM() { return new Date().getHours() < 13; }
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Morning,';
+  if (h < 17) return 'Afternoon,';
+  return 'Evening,';
+}
+
+function formatDate(d) {
+  const date = d ? new Date(d) : new Date();
+  return date.toLocaleDateString('en-CA', { weekday:'long', month:'long', day:'numeric' });
+}
+
+function getDayQuote() {
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  return QUOTES[dayOfYear % QUOTES.length];
+}
+
+// ── RESET DAILY IF NEW DAY ───────────────────────────────────────────
+function checkDailyReset() {
+  const t = today();
+  if (state.lastCheckin && state.lastCheckin !== t) {
+    // Save yesterday to log if there's something to save
+    if (state.bodyState || state.priorities.length) {
+      const entry = {
+        date: state.lastCheckin,
+        state: state.bodyState,
+        checklist: Object.assign({}, state.checkDone),
+        priorities: state.priorities.map(p => ({ txt: p, status: state.goalReview[p] || null })),
+        evening: state.eveningEntry,
+        anchor: state.anchor,
+      };
+      state.log.unshift(entry);
+      if (state.log.length > 60) state.log = state.log.slice(0, 60);
+    }
+    // Update streak
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yStr = yesterday.toISOString().split('T')[0];
+    if (state.lastCheckin === yStr) state.streak = (state.streak || 0) + 1;
+    else state.streak = 1;
+    // Reset daily
+    state.checkDone = {};
+    state.bodyState = null;
+    state.anchor = '';
+    state.priorities = [];
+    state.eveningEntry = '';
+    state.goalReview = {};
+    // Reset weekly on Monday
+    if (new Date().getDay() === 1) state.weeklyGoals = [];
+  }
+  state.lastCheckin = t;
+  saveState();
+}
+
+// ── NAV ─────────────────────────────────────────────────────────────
+const screens = ['s-home','s-evening','s-weekly','s-log','s-settings'];
+const navItems = document.querySelectorAll('.ni');
+
+function go(id, i) {
+  screens.forEach(s => document.getElementById(s).classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  navItems.forEach(n => n.classList.remove('active'));
+  navItems[i].classList.add('active');
+  if (id === 's-home') renderHome();
+  if (id === 's-evening') renderEvening();
+  if (id === 's-weekly') renderWeekly();
+  if (id === 's-log') renderLog();
+  if (id === 's-settings') renderSettings();
+}
+
+// ── HOME RENDER ──────────────────────────────────────────────────────
+function renderHome() {
+  // Date + greeting
+  document.getElementById('home-date').textContent = formatDate();
+  document.getElementById('home-greet').innerHTML = `${getGreeting()}<br><em>Harris.</em>`;
+  document.getElementById('streak-badge').textContent = `🔥 ${state.streak || 0} day${state.streak === 1 ? '' : 's'}`;
+
+  // Quote
+  const q = getDayQuote();
+  document.getElementById('quote-txt').textContent = q.text;
+  document.getElementById('quote-auth').textContent = `— ${q.auth}`;
+
+  // Weekly strip
+  const wg = document.getElementById('weekly-strip-goals');
+  if (state.weeklyGoals && state.weeklyGoals.filter(g=>g).length) {
+    wg.innerHTML = state.weeklyGoals.filter(g=>g).map(g =>
+      `<div class="weekly-goal-item">${g}</div>`
+    ).join('');
+  } else {
+    wg.innerHTML = `<div class="weekly-empty">No goals set yet — tap Edit</div>`;
+  }
+
+  // Context badges
+  const ctx = document.getElementById('ctx-row');
+  const kidWeek = isKidWeek();
+  const workday = isWorkday();
+  ctx.innerHTML = `
+    <div class="ctx-badge ${kidWeek ? 'on' : ''}">👨‍👧 ${kidWeek ? 'Kid week' : 'Solo week'}</div>
+    <div class="ctx-badge ${workday ? 'on' : ''}">💼 ${workday ? 'Workday' : 'Weekend'}</div>
+  `;
+
+  // Checklist
+  const cl = document.getElementById('checklist');
+  cl.innerHTML = state.checklist.map((item,i) => {
+    const [label, icon] = item.split('|');
+    const done = state.checkDone[label];
+    return `<div class="ci ${done?'done':''}" onclick="toggleCheck('${label}')">
+      <div class="cb">${done?'✓':''}</div>
+      <div class="clbl">${label}</div>
+      <div class="cico">${icon}</div>
+    </div>`;
+  }).join('');
+
+  // Priorities
+  renderPriorities();
+
+  // Body state
+  document.querySelectorAll('.sbtn').forEach(btn => {
+    btn.classList.toggle('sel', btn.getAttribute('onclick').includes(`'${state.bodyState}'`));
+  });
+
+  // Anchor
+  document.getElementById('anchor-input').value = state.anchor || '';
+  document.getElementById('anchor-input').oninput = (e) => { state.anchor = e.target.value; saveState(); };
+
+  // Break cards
+  const bk = document.getElementById('break-cards');
+  const breaksLabel = document.getElementById('breaks-label');
+  if (!isWorkday()) {
+    bk.style.display = 'none';
+    breaksLabel.style.display = 'none';
+  } else {
+    bk.style.display = 'grid';
+    breaksLabel.style.display = 'block';
+    bk.innerHTML = `
+      <div class="bkcard">
+        <div class="bktime">10:30</div>
+        <div class="bklbl">Morning break</div>
+        <div class="bkst ${state.notifs.break1?'':'off'}">
+          <div class="bkdot"></div> ${state.notifs.break1 ? 'Active' : 'Off'}
+        </div>
+      </div>
+      <div class="bkcard">
+        <div class="bktime">1:00</div>
+        <div class="bklbl">Midday break</div>
+        <div class="bkst ${state.notifs.break2?'':'off'}">
+          <div class="bkdot"></div> ${state.notifs.break2 ? 'Active' : 'Off'}
+        </div>
+      </div>
+    `;
+  }
+}
+
+function renderPriorities() {
+  const list = document.getElementById('priority-list');
+  const addBtn = document.getElementById('add-priority-btn');
+  list.innerHTML = state.priorities.map((p,i) =>
+    `<div class="priority-item">
+      <div class="priority-num">${i+1}</div>
+      <div class="priority-txt">${p}</div>
+      <div style="font-size:11px;color:var(--muted);cursor:pointer" onclick="removePriority(${i})">✕</div>
+    </div>`
+  ).join('');
+  addBtn.style.display = state.priorities.length >= 3 ? 'none' : 'block';
+}
+
+// ── CHECKLIST ────────────────────────────────────────────────────────
+function toggleCheck(label) {
+  state.checkDone[label] = !state.checkDone[label];
+  saveState();
+  renderHome();
+}
+
+// ── STATE SELECTOR ───────────────────────────────────────────────────
+function selState(el, val) {
+  state.bodyState = val;
+  saveState();
+  document.querySelectorAll('.sbtn').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+}
+
+// ── PRIORITIES ───────────────────────────────────────────────────────
+function openPriorityModal() {
+  if (state.priorities.length >= 3) return;
+  document.getElementById('priority-input').value = '';
+  // Weekly suggestions
+  const sugg = document.getElementById('weekly-suggestions');
+  const available = (state.weeklyGoals || []).filter(g => g && !state.priorities.includes(g));
+  sugg.innerHTML = available.map(g =>
+    `<div onclick="selectSuggestion('${g.replace(/'/g,"\\'")}');" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12px;cursor:pointer;color:var(--muted);">
+      <span style="color:var(--accent);margin-right:6px">↑</span>${g}
+    </div>`
+  ).join('');
+  document.getElementById('priority-modal').classList.add('open');
+  setTimeout(() => document.getElementById('priority-input').focus(), 100);
+}
+
+function selectSuggestion(txt) {
+  document.getElementById('priority-input').value = txt;
+}
+
+function closePriorityModal() {
+  document.getElementById('priority-modal').classList.remove('open');
+}
+
+function addPriority() {
+  const val = document.getElementById('priority-input').value.trim();
+  if (!val) return;
+  if (state.priorities.length < 3) {
+    state.priorities.push(val);
+    saveState();
+  }
+  closePriorityModal();
+  renderPriorities();
+}
+
+function removePriority(i) {
+  state.priorities.splice(i, 1);
+  saveState();
+  renderPriorities();
+}
+
+// ── EVENING ──────────────────────────────────────────────────────────
+function renderEvening() {
+  document.getElementById('evening-date').textContent = formatDate();
+  document.getElementById('evening-input').value = state.eveningEntry || '';
+  document.getElementById('evening-input').oninput = (e) => { state.eveningEntry = e.target.value; saveState(); };
+
+  const gr = document.getElementById('goal-review');
+  if (!state.priorities.length) {
+    gr.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:0 0 4px">No priorities set today.</div>`;
+    return;
+  }
+  gr.innerHTML = state.priorities.map(p => `
+    <div class="gr-item">
+      <div class="gr-txt">${p}</div>
+      <div class="gr-btns">
+        <button class="gr-btn ${state.goalReview[p]==='done'?'sel-done':''}" onclick="reviewGoal('${p.replace(/'/g,"\\'")}','done')">Done</button>
+        <button class="gr-btn ${state.goalReview[p]==='partial'?'sel-partial':''}" onclick="reviewGoal('${p.replace(/'/g,"\\'")}','partial')">Partial</button>
+        <button class="gr-btn ${state.goalReview[p]==='pushed'?'sel-pushed':''}" onclick="reviewGoal('${p.replace(/'/g,"\\'")}','pushed')">Pushed</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function reviewGoal(p, status) {
+  state.goalReview[p] = status;
+  saveState();
+  renderEvening();
+}
+
+function saveEvening() {
+  // Save to log
+  const entry = {
+    date: today(),
+    state: state.bodyState,
+    checklist: Object.assign({}, state.checkDone),
+    priorities: state.priorities.map(p => ({ txt: p, status: state.goalReview[p] || null })),
+    evening: state.eveningEntry,
+    anchor: state.anchor,
+  };
+  // Replace today's entry if exists
+  const idx = state.log.findIndex(l => l.date === today());
+  if (idx >= 0) state.log[idx] = entry;
+  else state.log.unshift(entry);
+  if (state.log.length > 60) state.log = state.log.slice(0,60);
+  state.streak = (state.streak || 0) + (idx < 0 ? 1 : 0);
+  saveState();
+  go('s-home', 0);
+}
+
+// ── WEEKLY ───────────────────────────────────────────────────────────
+function renderWeekly() {
+  const container = document.getElementById('weekly-goals-edit');
+  const goals = state.weeklyGoals.length ? state.weeklyGoals : ['','','','',''];
+  container.innerHTML = goals.map((g,i) => `
+    <div class="wg-input-row">
+      <div class="wg-num">${i+1}</div>
+      <input class="wg-input" id="wg-${i}" value="${g}" placeholder="Goal ${i+1}…" />
+    </div>
+  `).join('');
+}
+
+function saveWeeklyGoals() {
+  state.weeklyGoals = [];
+  for (let i=0; i<5; i++) {
+    const val = document.getElementById(`wg-${i}`)?.value.trim() || '';
+    if (val) state.weeklyGoals.push(val);
+  }
+  saveState();
+  go('s-home', 0);
+}
+
+// ── LOG ──────────────────────────────────────────────────────────────
+function renderLog() {
+  const container = document.getElementById('log-entries');
+  if (!state.log.length) {
+    container.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:0 16px">No entries yet.</div>`;
+    return;
+  }
+  const stateLabels = { grounded:'🟢 Grounded', edgy:'🟡 Edgy', fried:'🔴 Fried', numb:'⚪ Numb' };
+  container.innerHTML = state.log.map(entry => {
+    const doneItems = Object.entries(entry.checklist||{}).filter(([,v])=>v).map(([k])=>k);
+    const tags = [
+      entry.state ? `<span class="le-tag">${stateLabels[entry.state]||entry.state}</span>` : '',
+      doneItems.length ? `<span class="le-tag green">${doneItems.length} self-care</span>` : '',
+      ...( (entry.priorities||[]).map(p => {
+        const cls = p.status === 'done' ? 'green' : p.status === 'pushed' ? 'red' : '';
+        return p.txt ? `<span class="le-tag ${cls}">${p.txt}${p.status?' — '+p.status:''}</span>` : '';
+      }))
+    ].filter(Boolean).join('');
+    return `<div class="le">
+      <div class="le-date">${formatDate(entry.date)}</div>
+      ${entry.evening ? `<div class="le-txt">${entry.evening}</div>` : ''}
+      <div class="le-meta">${tags}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────────
+function renderSettings() {
+  // Notification toggles
+  ['morning','evening','break1','break2'].forEach(k => {
+    const el = document.getElementById(`tog-${k}`);
+    if (el) el.classList.toggle('off', !state.notifs[k]);
+  });
+  // Context overrides
+  ['workday-override','kidweek-override'].forEach(k => {
+    const el = document.getElementById(`tog-${k}`);
+    if (el) el.classList.toggle('off', !state.settings[k]);
+  });
+  // Notif status
+  const ns = document.getElementById('notif-status');
+  if (ns) ns.textContent = Notification.permission === 'granted' ? '✓ Enabled' : 'Tap to enable →';
+  // Checklist settings
+  const cs = document.getElementById('checklist-settings');
+  cs.innerHTML = state.checklist.map((item,i) => {
+    const [label] = item.split('|');
+    return `<div class="st-item"><div class="st-lbl">${label}</div><div style="color:var(--muted);font-size:11px;cursor:pointer" onclick="removeCheckItem(${i})">Remove</div></div>`;
+  }).join('') + `<div class="st-item dashed" onclick="addCheckItem()"><div class="st-lbl">+ Add item</div><div class="st-val">→</div></div>`;
+}
+
+function toggleNotif(key) {
+  state.notifs[key] = !state.notifs[key];
+  saveState();
+  scheduleNotifications();
+  renderSettings();
+}
+
+function toggleSetting(key) {
+  state.settings[key] = !state.settings[key];
+  saveState();
+  renderSettings();
+}
+
+function removeCheckItem(i) {
+  state.checklist.splice(i,1);
+  saveState();
+  renderSettings();
+}
+
+function addCheckItem() {
+  const label = prompt('New checklist item:');
+  if (!label) return;
+  const icon = '✓';
+  state.checklist.push(`${label}|${icon}`);
+  saveState();
+  renderSettings();
+}
+
+// ── NOTIFICATIONS ────────────────────────────────────────────────────
+function requestNotifPermission() {
+  if (!('Notification' in window)) { alert('Notifications not supported in this browser.'); return; }
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') {
+      scheduleNotifications();
+      renderSettings();
+    }
+  });
+}
+
+function scheduleNotifications() {
+  if (!('serviceWorker' in navigator) || Notification.permission !== 'granted') return;
+  const priorities = state.priorities.length ? state.priorities.join(', ') : 'your priorities for today';
+  navigator.serviceWorker.ready.then(reg => {
+    reg.active?.postMessage({
+      type: 'schedule',
+      notifs: state.notifs,
+      priorities,
+    });
+  });
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────
+function init() {
+  checkDailyReset();
+  renderHome();
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then(() => {
+      scheduleNotifications();
+    });
+  }
+}
+
+init();
+</script>
+</body>
+</html>
